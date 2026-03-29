@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ValidaShelf</title>
+<style>
+:root {
+  --bg:#0d0f14; --surface:#161a22; --surface2:#1e2330; --border:#2a3040;
+  --accent:#00e5a0; --accent2:#ff6b35; --warn:#ffd60a; --danger:#ff3860;
+  --text:#e8eaf0; --muted:#6b7590;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;}
+.shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh;}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:24px 16px;display:flex;flex-direction:column;gap:6px;position:sticky;top:0;height:100vh;}
+.main{padding:36px 40px;overflow-y:auto;}
+.logo{font-weight:800;font-size:1.2rem;color:var(--accent);margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.logo-icon{width:30px;height:30px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.9rem;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;cursor:pointer;font-size:.88rem;font-weight:600;color:var(--muted);transition:all .15s;border:none;background:none;width:100%;text-align:left;}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{background:rgba(0,229,160,.12);color:var(--accent);}
+.view{display:none;}.view.active{display:block;}
+.section-title{font-size:1.5rem;font-weight:800;margin-bottom:6px;}
+.section-sub{color:var(--muted);font-size:.88rem;margin-bottom:28px;}
+.box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px;}
+.box-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:14px;}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;}
+.stat-num{font-size:2rem;font-weight:700;font-family:monospace;line-height:1;}
+.stat-label{font-size:.72rem;color:var(--muted);margin-top:5px;text-transform:uppercase;letter-spacing:1px;}
+.stat.danger .stat-num{color:var(--danger);}
+.stat.warn .stat-num{color:var(--warn);}
+.stat.atencao .stat-num{color:var(--accent2);}
+.stat.ok .stat-num{color:var(--accent);}
+.scan-row{display:flex;gap:10px;align-items:center;}
+.barcode-input{flex:1;background:var(--bg);border:2px solid var(--border);border-radius:10px;padding:13px 16px;font-size:1.1rem;color:var(--text);outline:none;transition:border-color .2s;font-family:monospace;}
+.barcode-input:focus{border-color:var(--accent);}
+.btn{padding:13px 22px;border-radius:10px;border:none;cursor:pointer;font-family:inherit;font-weight:700;font-size:.88rem;transition:all .15s;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+.btn-primary{background:var(--accent);color:#000;}
+.btn-primary:hover{opacity:.85;}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.btn-secondary:hover{border-color:var(--accent);}
+.btn-danger{background:rgba(255,56,96,.15);color:var(--danger);border:1px solid rgba(255,56,96,.3);padding:8px 14px;}
+.btn-sm{padding:7px 14px;font-size:.8rem;}
+.product-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:grid;grid-template-columns:72px 1fr auto;gap:18px;align-items:start;}
+.product-img{width:72px;height:72px;border-radius:9px;object-fit:contain;background:var(--surface2);}
+.product-img-placeholder{width:72px;height:72px;border-radius:9px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:1.8rem;}
+.product-name{font-size:1rem;font-weight:700;margin-bottom:3px;}
+.product-brand{font-size:.8rem;color:var(--muted);margin-bottom:8px;}
+.badges{display:flex;gap:6px;flex-wrap:wrap;}
+.badge{font-size:.7rem;padding:3px 9px;border-radius:20px;font-weight:600;}
+.badge-ok{background:rgba(0,229,160,.1);color:var(--accent);border:1px solid rgba(0,229,160,.2);}
+.badge-warn{background:rgba(255,214,10,.1);color:var(--warn);border:1px solid rgba(255,214,10,.2);}
+.badge-danger{background:rgba(255,56,96,.1);color:var(--danger);border:1px solid rgba(255,56,96,.2);}
+.badge-info{background:rgba(255,107,53,.1);color:var(--accent2);border:1px solid rgba(255,107,53,.2);}
+.chip{font-size:.7rem;padding:2px 8px;border-radius:4px;background:var(--surface2);color:var(--muted);font-family:monospace;}
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px;}
+.table-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.table-title{font-weight:700;font-size:.92rem;}
+table{width:100%;border-collapse:collapse;}
+th{padding:11px 18px;font-size:.7rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);font-weight:600;}
+td{padding:13px 18px;font-size:.88rem;border-bottom:1px solid var(--border);}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--surface2);}
+.dias-ok{background:rgba(0,229,160,.1);color:var(--accent);border:1px solid rgba(0,229,160,.2);font-family:monospace;font-size:.78rem;padding:3px 9px;border-radius:5px;font-weight:700;}
+.dias-warn{background:rgba(255,214,10,.1);color:var(--warn);border:1px solid rgba(255,214,10,.2);font-family:monospace;font-size:.78rem;padding:3px 9px;border-radius:5px;font-weight:700;}
+.dias-danger{background:rgba(255,56,96,.1);color:var(--danger);border:1px solid rgba(255,56,96,.2);font-family:monospace;font-size:.78rem;padding:3px 9px;border-radius:5px;font-weight:700;}
+.hist-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);align-items:flex-start;}
+.hist-item:last-child{border-bottom:none;}
+.hist-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;}
+.hist-acao{font-size:.8rem;font-weight:700;}
+.hist-det{font-size:.78rem;color:var(--muted);margin-top:2px;}
+.hist-data{font-family:monospace;font-size:.7rem;color:var(--muted);white-space:nowrap;}
+.empty{text-align:center;padding:50px;color:var(--muted);}
+.empty-icon{font-size:2.5rem;margin-bottom:10px;}
+.loader{display:none;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;}
+.loader.on{display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.toast{position:fixed;bottom:24px;right:24px;border-radius:10px;padding:12px 18px;font-size:.88rem;font-weight:600;z-index:99999;display:none;border:1px solid var(--border);background:var(--surface2);}
+.toast.show{display:block;}
+.toast.success{border-color:var(--accent);color:var(--accent);}
+.toast.error{border-color:var(--danger);color:var(--danger);}
+/* Import area */
+#drop-zone{border:2px dashed var(--border);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:border-color .2s;}
+#drop-zone:hover{border-color:var(--accent);}
+code{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:.82rem;}
+pre{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:.75rem;overflow-x:auto;white-space:pre-wrap;line-height:1.6;}
+.badge-interno{background:rgba(255,107,53,.15);color:var(--accent2);border:1px solid rgba(255,107,53,.3);font-size:.68rem;padding:2px 7px;border-radius:4px;font-weight:700;font-family:monospace;}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="logo"><div class="logo-icon">📦</div>ValidaShelf</div>
+    <button class="nav-item active" onclick="showView('dashboard')" id="nav-dashboard"><span>📊</span> Dashboard</button>
+    <button class="nav-item" onclick="showView('scanner')" id="nav-scanner"><span>📷</span> Scanner</button>
+    <button class="nav-item" onclick="showView('lista')" id="nav-lista"><span>📋</span> Todos os Produtos</button>
+    <button class="nav-item" onclick="showView('importacao')" id="nav-importacao"><span>📥</span> Importar / Integrar</button>
+    <button class="nav-item" onclick="showView('usuarios')" id="nav-usuarios" style="display:none;"><span>👥</span> Usuários</button>
+    <div style="flex:1"></div>
+    <button class="btn btn-secondary" onclick="showView('email')" id="nav-email" style="width:100%;justify-content:center;margin-bottom:8px;">📧 Alertas por E-mail</button>
+    <button class="btn btn-secondary" onclick="exportar()" style="width:100%;justify-content:center;margin-bottom:8px;">⬇ Exportar CSV</button>
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px;">
+      <div id="info-usuario" style="font-size:.78rem;color:var(--muted);margin-bottom:8px;padding:0 4px;"></div>
+      <button class="btn btn-secondary" onclick="sair()" style="width:100%;justify-content:center;font-size:.82rem;">🚪 Sair</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div class="view active" id="view-dashboard">
+      <div class="section-title">Dashboard</div>
+      <div class="section-sub">Visão geral dos produtos por situação de validade</div>
+      <div class="stats">
+        <div class="stat danger"><div class="stat-num" id="s-vencidos">—</div><div class="stat-label">Vencidos</div></div>
+        <div class="stat warn"><div class="stat-num" id="s-criticos">—</div><div class="stat-label">Críticos ≤7d</div></div>
+        <div class="stat atencao"><div class="stat-num" id="s-atencao">—</div><div class="stat-label">Atenção</div></div>
+        <div class="stat ok"><div class="stat-num" id="s-ok">—</div><div class="stat-label">OK</div></div>
+      </div>
+      <div id="dash-tables"></div>
+    </div>
+
+    <!-- SCANNER -->
+    <div class="view" id="view-scanner">
+      <div class="section-title">Scanner de Código de Barras</div>
+      <div class="section-sub">Bipe ou digite o código EAN para buscar o produto</div>
+      <div class="box">
+        <div class="box-title">🔍 Código de Barras</div>
+        <div class="scan-row">
+          <input class="barcode-input" id="barcode-input" type="text" placeholder="Ex: 7891000071625" onkeydown="if(event.key==='Enter')buscar()">
+          <div class="loader" id="scan-loader"></div>
+          <button class="btn btn-primary" onclick="buscar()">Buscar</button>
+          <button class="btn btn-secondary" onclick="limpar()">Limpar</button>
+        </div>
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <span style="font-size:.8rem;color:var(--muted);">Produto sem código de barras?</span>
+          <button class="btn btn-secondary btn-sm" onclick="cadastrarSemCodigo()" style="border-color:var(--accent2);color:var(--accent2);">
+            🏷 Cadastrar sem código de barras
+          </button>
+        </div>
+      </div>
+      <div id="scan-result"></div>
+    </div>
+
+    <!-- LISTA -->
+    <div class="view" id="view-lista">
+      <div class="section-title">Todos os Produtos</div>
+      <div class="section-sub">Lista completa do estoque cadastrado</div>
+      <div id="lista-wrap"></div>
+    </div>
+
+    <!-- IMPORTAÇÃO -->
+    <div class="view" id="view-importacao">
+      <div class="section-title">Importar / Integrar</div>
+      <div class="section-sub">Importe produtos via Excel, CSV ou integre com outros sistemas via API</div>
+      <div class="box">
+        <div class="box-title">📂 Upload de Arquivo</div>
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+          <a href="/api/template/csv" class="btn btn-secondary btn-sm" style="text-decoration:none;">⬇ Template CSV</a>
+          <a href="/api/template/excel" class="btn btn-secondary btn-sm" style="text-decoration:none;">⬇ Template Excel</a>
+        </div>
+        <div id="drop-zone" onclick="document.getElementById('file-input').click()"
+          ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+          ondragleave="this.style.borderColor='var(--border)'"
+          ondrop="handleDrop(event)">
+          <div style="font-size:2rem;margin-bottom:8px;">📁</div>
+          <div style="font-weight:600;margin-bottom:4px;">Clique ou arraste o arquivo aqui</div>
+          <div style="font-size:.8rem;color:var(--muted);">.xlsx ou .csv</div>
+        </div>
+        <input type="file" id="file-input" accept=".csv,.xlsx" style="display:none" onchange="uploadArquivo(this.files[0])">
+        <div id="import-result" style="margin-top:14px;"></div>
+      </div>
+      <div class="box">
+        <div class="box-title">🔌 Integração via API REST</div>
+        <div style="margin-bottom:14px;">
+          <div style="font-size:.75rem;color:var(--muted);margin-bottom:6px;font-weight:600;">SUA API KEY</div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <code id="api-key-display" style="flex:1;padding:10px;word-break:break-all;">Carregando...</code>
+            <button class="btn btn-secondary btn-sm" onclick="copiarApiKey()">📋 Copiar</button>
+          </div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <div style="font-size:.75rem;color:var(--muted);margin-bottom:6px;font-weight:600;">EXEMPLO cURL</div>
+          <pre id="curl-example">Carregando...</pre>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" onclick="testarApi()">🧪 Testar API</button>
+          <a href="/api/integracao/info" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">📄 Documentação</a>
+        </div>
+        <div id="api-test-result" style="margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <!-- EMAIL -->
+    <div class="view" id="view-email">
+      <div class="section-title">Alertas por E-mail</div>
+      <div class="section-sub">Configure alertas automáticos ao cadastrar produtos próximos ao vencimento — envia Excel + PDF</div>
+
+      <div class="box" style="margin-bottom:20px;">
+        <div class="box-title">📧 Configuração de E-mail</div>
+
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7590;margin-bottom:7px;">Provedor de E-mail</label>
+          <select id="email-provider" onchange="toggleSmtp()"
+            style="width:100%;background:#0d0f14;border:2px solid #2a3040;border-radius:9px;padding:11px 13px;font-size:.92rem;color:#e8eaf0;outline:none;">
+            <option value="gmail">Gmail</option>
+            <option value="outlook">Outlook / Hotmail</option>
+            <option value="custom">Domínio próprio (SMTP)</option>
+          </select>
+        </div>
+
+        <div id="smtp-fields" style="display:none;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+          <div>
+            <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7590;margin-bottom:7px;">Servidor SMTP</label>
+            <input id="smtp-host" type="text" placeholder="mail.suaempresa.com.br"
+              style="width:100%;background:#0d0f14;border:2px solid #2a3040;border-radius:9px;padding:11px 13px;font-size:.92rem;color:#e8eaf0;outline:none;"
+              onfocus="this.style.borderColor='#00e5a0'" onblur="this.style.borderColor='#2a3040'">
+          </div>
+          <div>
+            <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7590;margin-bottom:7px;">Porta SMTP</label>
+            <input id="smtp-port" type="number" placeholder="587" value="587"
+              style="width:100%;background:#0d0f14;border:2px solid #2a3040;border-radius:9px;padding:11px 13px;font-size:.92rem;color:#e8eaf0;outline:none;"
+              onfocus="this.style.borderColor='#00e5a0'" onblur="this.style.borderColor='#2a3040'">
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+          <div>
+            <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7590;margin-bottom:7px;">E-mail Remetente</label>
+            <input id="email-usuario" type="email" placeholder="seuemail@gmail.com"
+              style="width:100%;background:#0d0f14;border:2px solid #2a3040;border-radius:9px;padding:11px 13px;font-size:.92rem;color:#e8eaf0;outline:none;"
+              onfocus="this.style.borderColor='#00e5a0'" onblur="this.style.borderColor='#2a3040'">
+          </div>
+          <div>
+            <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7590;margin-bottom:7px;">Senha / Senha de App</label>
+            <input id="email-senha" type="password" placeholder="••••••••••••••••"
+              style="width:100%;background:#0d0f14;border:2px solid #2a3040;border-radius:9px;padding:11px 13px;font-size:.92rem;color:#e8eaf0;outline:none;"
+              onfocus="this.style.borderColor='#00e5a0'" onblur="this.style.borderColor='#2a3040'">
+          </div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7590;margin-bottom:7px;">E-mail Destinatário (quem recebe os alertas)</label>
+          <input id="email-destino" type="email" placeholder="gerente@empresa.com"
+            style="width:100%;background:#0d0f14;border:2px solid #2a3040;border-radius:9px;padding:11px 13px;font-size:.92rem;color:#e8eaf0;outline:none;"
+            onfocus="this.style.borderColor='#00e5a0'" onblur="this.style.borderColor='#2a3040'">
+        </div>
+
+        <div style="background:#1e2330;border-radius:10px;padding:14px;margin-bottom:16px;">
+          <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7590;margin-bottom:4px;">⚡ Quando o alerta é enviado?</div>
+          <div style="font-size:.85rem;color:#e8eaf0;margin-top:6px;">Automaticamente sempre que um produto for cadastrado ou editado com validade dentro do prazo de alerta configurado. O e-mail inclui <strong>Excel + relatório imprimível (PDF)</strong>.</div>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="salvarEmailConfig()">💾 Salvar</button>
+          <button class="btn btn-secondary" onclick="testarEmail()">🧪 Testar envio</button>
+          <button class="btn btn-secondary" onclick="enviarRelatorio()">📤 Enviar relatório agora</button>
+          <a href="/api/relatorio/excel" class="btn btn-secondary" style="text-decoration:none;">⬇ Baixar Excel</a>
+          <a href="/api/relatorio/pdf" target="_blank" class="btn btn-secondary" style="text-decoration:none;">🖨 Visualizar / Imprimir PDF</a>
+        </div>
+        <div id="email-result" style="margin-top:14px;font-size:.88rem;"></div>
+      </div>
+
+      <div class="box" style="background:#1a1e28;">
+        <div class="box-title">💡 Como gerar Senha de App</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div>
+            <div style="font-size:.8rem;font-weight:700;color:var(--accent);margin-bottom:8px;">GMAIL</div>
+            <ol style="color:#e8eaf0;font-size:.82rem;line-height:1.9;padding-left:18px;">
+              <li>Acesse <strong>myaccount.google.com</strong></li>
+              <li>Segurança → <strong>Verificação em 2 etapas</strong> (ative)</li>
+              <li>Procure <strong>"Senhas de app"</strong></li>
+              <li>Crie uma senha para "ValidaShelf"</li>
+              <li>Use a senha de 16 dígitos gerada</li>
+            </ol>
+          </div>
+          <div>
+            <div style="font-size:.8rem;font-weight:700;color:var(--accent2);margin-bottom:8px;">OUTLOOK / DOMÍNIO PRÓPRIO</div>
+            <ol style="color:#e8eaf0;font-size:.82rem;line-height:1.9;padding-left:18px;">
+              <li>Use seu e-mail e senha normais</li>
+              <li>Para domínio próprio, informe o servidor SMTP e porta</li>
+              <li>Geralmente: <strong>mail.seudominio.com.br</strong></li>
+              <li>Porta: <strong>587</strong> (TLS) ou <strong>465</strong> (SSL)</li>
+              <li>Clique em "Testar envio" para confirmar</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- USUÁRIOS -->
+    <div class="view" id="view-usuarios">
+      <div class="section-title">Usuários</div>
+      <div class="section-sub">Gerencie quem tem acesso ao ValidaShelf</div>
+
+      <div class="box" style="margin-bottom:20px;">
+        <div class="box-title">➕ Novo Usuário</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div>
+            <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7590;margin-bottom:7px;">Nome</label>
+            <input id="nu-nome" type="text" placeholder="Nome completo"
+              style="width:100%;background:#0d0f14;border:2px solid #2a3040;border-radius:9px;padding:11px 13px;font-size:.92rem;color:#e8eaf0;outline:none;font-family:inherit;"
+              onfocus="this.style.borderColor='#00e5a0'" onblur="this.style.borderColor='#2a3040'">
+          </div>
+          <div>
+            <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7590;margin-bottom:7px;">Usuário (login)</label>
+            <input id="nu-usuario" type="text" placeholder="usuario.login"
+              style="width:100%;background:#0d0f14;border:2px solid #2a3040;border-radius:9px;padding:11px 13px;font-size:.92rem;color:#e8eaf0;outline:none;font-family:inherit;"
+              onfocus="this.style.borderColor='#00e5a0'" onblur="this.style.borderColor='#2a3040'">
+          </div>
+          <div>
+            <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7590;margin-bottom:7px;">Senha</label>
+            <input id="nu-senha" type="password" placeholder="Senha de acesso"
+              style="width:100%;background:#0d0f14;border:2px solid #2a3040;border-radius:9px;padding:11px 13px;font-size:.92rem;color:#e8eaf0;outline:none;font-family:inherit;"
+              onfocus="this.style.borderColor='#00e5a0'" onblur="this.style.borderColor='#2a3040'">
+          </div>
+          <div>
+            <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7590;margin-bottom:7px;">Perfil</label>
+            <select id="nu-perfil"
+              style="width:100%;background:#0d0f14;border:2px solid #2a3040;border-radius:9px;padding:11px 13px;font-size:.92rem;color:#e8eaf0;outline:none;">
+              <option value="operador">Operador</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="criarUsuario()">➕ Criar Usuário</button>
+        <div id="nu-resultado" style="margin-top:12px;font-size:.85rem;"></div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-header"><div class="table-title">👥 Usuários cadastrados</div></div>
+        <table>
+          <thead><tr><th>Nome</th><th>Usuário</th><th>Perfil</th><th>Criado em</th><th>Ações</th></tr></thead>
+          <tbody id="tabela-usuarios"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;align-items:center;justify-content:center;">
+  <div id="modal-box" style="background:#161a22;border:1px solid #2a3040;border-radius:18px;padding:30px;width:460px;max-width:95vw;max-height:90vh;overflow-y:auto;">
+    <div id="modal-titulo" style="font-size:1.15rem;font-weight:800;margin-bottom:22px;color:#e8eaf0;"></div>
+    <input type="hidden" id="f-id">
+    <input type="hidden" id="f-codigo">
+    <input type="hidden" id="f-imagem">
+    <div id="modal-codigo-info" style="display:none;"></div>
+
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7590;margin-bottom:7px;">Nome do Produto</label>
+      <input id="f-nome" type="text" placeholder="Nome do produto"
+        style="width:100%;background:#0d0f14;border:2px solid #2a3040;border-radius:9px;padding:11px 13px;font-size:.92rem;color:#e8eaf0;outline:none;font-family:inherit;"
+        onfocus="this.style.borderColor='#00e5a0'" onblur="this.style.borderColor='#2a3040'">
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+      <div>
+        <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7590;margin-bottom:7px;">Marca</label>
+        <input id="f-marca" type="text" placeholder="Marca"
+          style="width:100%;background:#0d0f14;border:2px solid #2a3040;border-radius:9px;padding:11px 13px;font-size:.92rem;color:#e8eaf0;outline:none;font-family:inherit;"
+          onfocus="this.style.borderColor='#00e5a0'" onblur="this.style.borderColor='#2a3040'">
+      </div>
+      <div>
+        <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7590;margin-bottom:7px;">Categoria</label>
+        <input id="f-categoria" type="text" placeholder="Categoria"
+          style="width:100%;background:#0d0f14;border:2px solid #2a3040;border-radius:9px;padding:11px 13px;font-size:.92rem;color:#e8eaf0;outline:none;font-family:inherit;"
+          onfocus="this.style.borderColor='#00e5a0'" onblur="this.style.borderColor='#2a3040'">
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+      <div>
+        <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7590;margin-bottom:7px;">Quantidade</label>
+        <input id="f-quantidade" type="number" min="0" value="1"
+          style="width:100%;background:#0d0f14;border:2px solid #2a3040;border-radius:9px;padding:11px 13px;font-size:.92rem;color:#e8eaf0;outline:none;font-family:inherit;"
+          onfocus="this.style.borderColor='#00e5a0'" onblur="this.style.borderColor='#2a3040'">
+      </div>
+      <div>
+        <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7590;margin-bottom:7px;">Validade</label>
+        <input id="f-validade" type="date"
+          style="width:100%;background:#0d0f14;border:2px solid #2a3040;border-radius:9px;padding:11px 13px;font-size:.92rem;color:#e8eaf0;outline:none;font-family:inherit;color-scheme:dark;"
+          onfocus="this.style.borderColor='#00e5a0'" onblur="this.style.borderColor='#2a3040'">
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <label style="display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6b7590;margin-bottom:7px;">Alertar quando restar (dias)</label>
+      <input id="f-alerta" type="number" min="1" value="30"
+        style="width:100%;background:#0d0f14;border:2px solid #2a3040;border-radius:9px;padding:11px 13px;font-size:.92rem;color:#e8eaf0;outline:none;font-family:inherit;"
+        onfocus="this.style.borderColor='#00e5a0'" onblur="this.style.borderColor='#2a3040'">
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="fecharModal()" style="padding:12px 22px;border-radius:9px;border:1px solid #2a3040;background:#1e2330;color:#e8eaf0;cursor:pointer;font-weight:700;font-family:inherit;">Cancelar</button>
+      <button onclick="salvar()" style="padding:12px 22px;border-radius:9px;border:none;background:#00e5a0;color:#000;cursor:pointer;font-weight:700;font-family:inherit;">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Autenticação ───────────────────────────────────────────────────────────
+const VS_TOKEN  = () => localStorage.getItem('vs_token')  || ''
+const VS_NOME   = () => localStorage.getItem('vs_nome')   || ''
+const VS_PERFIL = () => localStorage.getItem('vs_perfil') || ''
+
+// Verifica sessão ao carregar — redireciona para login se não autenticado
+;(async function verificarSessao() {
+  const token = VS_TOKEN()
+  if (!token) { window.location.href = '/login'; return }
+  try {
+    const res = await fetch('/api/me', { headers:{'x-session-token': token} })
+    const d   = await res.json()
+    if (!d.ok) { window.location.href = '/login'; return }
+    // Atualiza info do usuário na sidebar
+    document.getElementById('info-usuario').innerHTML =
+      `<strong style="color:var(--text)">${d.usuario.nome}</strong><br>
+       <span style="font-size:.72rem;">${d.usuario.perfil === 'admin' ? '🔑 Admin' : '👤 Operador'}</span>`
+    // Mostra menu de usuários apenas para admin
+    if (d.usuario.perfil === 'admin') {
+      document.getElementById('nav-usuarios').style.display = 'flex'
+    }
+  } catch {
+    window.location.href = '/login'
+  }
+})()
+
+// Wrapper que injeta token em todos os fetch
+const apiFetch = (url, opts={}) => {
+  opts.headers = { ...(opts.headers||{}), 'x-session-token': VS_TOKEN() }
+  return fetch(url, opts)
+}
+
+async function sair() {
+  await apiFetch('/api/logout', { method:'POST' })
+  localStorage.removeItem('vs_token')
+  localStorage.removeItem('vs_nome')
+  localStorage.removeItem('vs_perfil')
+  window.location.href = '/login'
+}
+
+// ── Usuários ───────────────────────────────────────────────────────────────
+async function carregarUsuarios() {
+  const res  = await apiFetch('/api/usuarios')
+  const data = await res.json()
+  if (!data.ok) return
+  const tbody = document.getElementById('tabela-usuarios')
+  tbody.innerHTML = data.usuarios.map(u => `
+    <tr>
+      <td><strong>${u.nome}</strong></td>
+      <td><span class="chip">${u.usuario}</span></td>
+      <td><span class="badge ${u.perfil==='admin'?'badge-warn':'badge-ok'}">${u.perfil==='admin'?'🔑 Admin':'👤 Operador'}</span></td>
+      <td style="color:var(--muted);font-size:.8rem;">${u.criado_em?.slice(0,10)||'—'}</td>
+      <td>
+        <button class="btn btn-secondary btn-sm" onclick="editarSenha(${u.id},'${u.nome}')">🔑 Senha</button>
+        <button class="btn btn-danger" style="margin-left:6px;" onclick="excluirUsuario(${u.id},'${u.nome}')">🗑</button>
+      </td>
+    </tr>`).join('')
+}
+
+async function criarUsuario() {
+  const nome    = document.getElementById('nu-nome').value.trim()
+  const usuario = document.getElementById('nu-usuario').value.trim()
+  const senha   = document.getElementById('nu-senha').value
+  const perfil  = document.getElementById('nu-perfil').value
+  const res_el  = document.getElementById('nu-resultado')
+  if (!nome||!usuario||!senha) { res_el.innerHTML='<span style="color:var(--danger)">Preencha todos os campos.</span>'; return }
+  const res  = await apiFetch('/api/usuarios', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nome,usuario,senha,perfil}) })
+  const data = await res.json()
+  if (data.ok) {
+    res_el.innerHTML = '<span style="color:var(--accent)">✅ Usuário criado!</span>'
+    document.getElementById('nu-nome').value = ''
+    document.getElementById('nu-usuario').value = ''
+    document.getElementById('nu-senha').value = ''
+    carregarUsuarios()
+    toast('✅ Usuário criado!')
+  } else {
+    res_el.innerHTML = `<span style="color:var(--danger)">❌ ${data.erro}</span>`
+  }
+}
+
+async function editarSenha(id, nome) {
+  const nova = prompt(`Nova senha para "${nome}":`)
+  if (!nova) return
+  const res  = await apiFetch(`/api/usuarios/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({senha:nova}) })
+  const data = await res.json()
+  if (data.ok) toast('✅ Senha alterada!')
+  else toast('❌ ' + data.erro, 'error')
+}
+
+async function excluirUsuario(id, nome) {
+  if (!confirm(`Excluir o usuário "${nome}"?`)) return
+  const res  = await apiFetch(`/api/usuarios/${id}`, { method:'DELETE' })
+  const data = await res.json()
+  if (data.ok) { toast('🗑 Usuário removido'); carregarUsuarios() }
+  else toast('❌ ' + data.erro, 'error')
+}
+
+// ── Estado global ──────────────────────────────────────────────────────────
+let lastApiInfo = {}
+
+// ── Utils ──────────────────────────────────────────────────────────────────
+function toast(msg, type='success') {
+  const t = document.getElementById('toast')
+  t.textContent = msg; t.className = `toast show ${type}`
+  setTimeout(() => t.className = 'toast', 3000)
+}
+
+function fmtDate(d) {
+  if (!d) return '—'
+  const [y,m,dia] = d.split('-')
+  return `${dia}/${m}/${y}`
+}
+
+function diasBadge(dias) {
+  if (dias === null || dias === undefined) return ''
+  if (dias < 0)  return `<span class="dias-danger">Vencido ${Math.abs(dias)}d</span>`
+  if (dias === 0) return `<span class="dias-danger">Vence hoje!</span>`
+  if (dias <= 7)  return `<span class="dias-danger">${dias}d restantes</span>`
+  if (dias <= 30) return `<span class="dias-warn">${dias}d restantes</span>`
+  return `<span class="dias-ok">${dias}d restantes</span>`
+}
+
+// ── Navegação ──────────────────────────────────────────────────────────────
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'))
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'))
+  document.getElementById('view-' + name).classList.add('active')
+  document.getElementById('nav-' + name).classList.add('active')
+  if (name === 'dashboard')  carregarDashboard()
+  if (name === 'lista')      carregarLista()
+  if (name === 'importacao') carregarApiInfo()
+  if (name === 'usuarios')   carregarUsuarios()
+}
+
+// ── Modal ──────────────────────────────────────────────────────────────────
+function abrirModalNovo(codigo, info, interno=false) {
+  document.getElementById('modal-titulo').textContent = interno
+    ? '🏷 Cadastrar Produto sem Código de Barras'
+    : 'Cadastrar Produto'
+  document.getElementById('f-id').value = ''
+  document.getElementById('f-codigo').value = codigo
+  document.getElementById('f-imagem').value = info.imagem_url || ''
+  document.getElementById('f-nome').value = info.nome || ''
+  document.getElementById('f-marca').value = info.marca || ''
+  document.getElementById('f-categoria').value = info.categoria || ''
+  document.getElementById('f-quantidade').value = 1
+  document.getElementById('f-validade').value = ''
+  document.getElementById('f-alerta').value = 30
+  // Mostra ou oculta info do código interno
+  const infoEl = document.getElementById('modal-codigo-info')
+  if (interno) {
+    infoEl.innerHTML = `<div style="background:rgba(255,107,53,.1);border:1px solid rgba(255,107,53,.3);border-radius:8px;padding:10px 13px;margin-bottom:14px;font-size:.82rem;">
+      🏷 Código interno gerado automaticamente: <strong style="color:var(--accent2);font-family:monospace;">${codigo}</strong>
+      <div style="color:var(--muted);margin-top:4px;font-size:.75rem;">Este código é usado internamente e não aparece em nenhuma base externa.</div>
+    </div>`
+    infoEl.style.display = 'block'
+  } else {
+    infoEl.style.display = 'none'
+  }
+  document.getElementById('modal-overlay').style.display = 'flex'
+  setTimeout(() => document.getElementById('f-nome').focus(), 50)
+}
+
+function abrirModalEditar(p) {
+  document.getElementById('modal-titulo').textContent = 'Editar Produto'
+  document.getElementById('f-id').value = p.id
+  document.getElementById('f-codigo').value = p.codigo_barras
+  document.getElementById('f-imagem').value = p.imagem_url || ''
+  document.getElementById('f-nome').value = p.nome || ''
+  document.getElementById('f-marca').value = p.marca || ''
+  document.getElementById('f-categoria').value = p.categoria || ''
+  document.getElementById('f-quantidade').value = p.quantidade || 1
+  document.getElementById('f-validade').value = p.validade || ''
+  document.getElementById('f-alerta').value = p.alerta_dias || 30
+  document.getElementById('modal-codigo-info').style.display = 'none'
+  document.getElementById('modal-overlay').style.display = 'flex'
+  setTimeout(() => document.getElementById('f-quantidade').focus(), 50)
+}
+
+function fecharModal() {
+  document.getElementById('modal-overlay').style.display = 'none'
+}
+
+// Clique fora fecha o modal
+document.getElementById('modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) fecharModal()
+})
+
+async function salvar() {
+  const id       = document.getElementById('f-id').value
+  const codigo   = document.getElementById('f-codigo').value
+  const nome     = document.getElementById('f-nome').value.trim()
+  const marca    = document.getElementById('f-marca').value.trim()
+  const categoria= document.getElementById('f-categoria').value.trim()
+  const quantidade = parseInt(document.getElementById('f-quantidade').value) || 0
+  const validade   = document.getElementById('f-validade').value
+  const alerta_dias= parseInt(document.getElementById('f-alerta').value) || 30
+  const imagem_url = document.getElementById('f-imagem').value
+
+  if (!nome)     { toast('Preencha o nome do produto', 'error'); return }
+  if (!validade) { toast('Preencha a data de validade', 'error'); return }
+
+  const body = { codigo_barras:codigo, nome, marca, categoria, imagem_url, quantidade, validade, alerta_dias }
+
+  const url    = id ? `/api/produto/${id}` : '/api/produto'
+  const method = id ? 'PUT' : 'POST'
+
+  try {
+    const res  = await apiFetch(url, { method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
+    const data = await res.json()
+
+    if (data.ok) {
+      toast(id ? '✅ Produto atualizado!' : '✅ Produto cadastrado!')
+      fecharModal()
+      // Recarrega a aba ativa corretamente
+      const ativa = document.querySelector('.view.active')
+      if (!ativa) return
+      const view = ativa.id.replace('view-', '')
+      if (view === 'lista')     carregarLista()
+      else if (view === 'dashboard') carregarDashboard()
+      else if (view === 'scanner') {
+        const r2 = await apiFetch('/api/buscar/' + codigo)
+        const d2 = await r2.json()
+        renderScan(codigo, d2)
+      }
+    } else {
+      toast('❌ Erro: ' + (data.erro || 'desconhecido'), 'error')
+    }
+  } catch(e) {
+    toast('❌ Erro de conexão', 'error')
+  }
+}
+
+async function deletar(id, recarregar) {
+  if (!confirm('Remover este produto?')) return
+  await apiFetch(`/api/produto/${id}`, { method:'DELETE' })
+  toast('🗑 Produto removido')
+  if (recarregar === 'lista') carregarLista()
+  else if (recarregar === 'dashboard') carregarDashboard()
+  else buscar()
+}
+
+// ── Scanner ────────────────────────────────────────────────────────────────
+async function buscar() {
+  const codigo = document.getElementById('barcode-input').value.trim()
+  if (!codigo) return
+  document.getElementById('scan-loader').classList.add('on')
+  document.getElementById('scan-result').innerHTML = ''
+  try {
+    const res  = await apiFetch('/api/buscar/' + codigo)
+    const data = await res.json()
+    lastApiInfo = data.api_info || {}
+    renderScan(codigo, data)
+  } catch(e) {
+    toast('Erro de conexão', 'error')
+  } finally {
+    document.getElementById('scan-loader').classList.remove('on')
+  }
+}
+
+function limpar() {
+  document.getElementById('barcode-input').value = ''
+  document.getElementById('scan-result').innerHTML = ''
+  document.getElementById('barcode-input').focus()
+}
+
+async function cadastrarSemCodigo() {
+  const res = await apiFetch('/api/codigo-interno')
+  const data = await res.json()
+  abrirModalNovo(data.codigo, {}, true)
+}
+
+
+function renderScan(codigo, data) {
+  const { produtos, api_info } = data
+  let html = ''
+
+  if (api_info && api_info.encontrado) {
+    const img = api_info.imagem_url
+      ? `<img src="${api_info.imagem_url}" class="product-img">`
+      : `<div class="product-img-placeholder">🛒</div>`
+    html += `
+      <div class="box" style="margin-bottom:16px;">
+        <div class="box-title">✅ Produto encontrado na base nacional</div>
+        <div style="display:flex;gap:18px;align-items:center;">
+          ${img}
+          <div style="flex:1;">
+            <div class="product-name">${api_info.nome}</div>
+            <div class="product-brand">${api_info.marca||''}</div>
+            <div class="badges"><span class="badge badge-info">${api_info.categoria||'Sem categoria'}</span><span class="chip">${codigo}</span></div>
+          </div>
+          <button class="btn btn-primary" onclick="abrirModalNovo('${codigo}', lastApiInfo)">+ Adicionar ao estoque</button>
+        </div>
+      </div>`
+  }
+
+  if (produtos.length > 0) {
+    html += `<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:10px;">📦 No seu estoque (${produtos.length})</div>`
+    for (const p of produtos) {
+      const hoje = new Date(); hoje.setHours(0,0,0,0)
+      const dias = p.validade ? Math.round((new Date(p.validade+'T00:00:00')-hoje)/86400000) : null
+      const img = p.imagem_url
+        ? `<img src="${p.imagem_url}" class="product-img">`
+        : `<div class="product-img-placeholder">📦</div>`
+      html += `
+        <div class="product-card">
+          ${img}
+          <div>
+            <div class="product-name">${p.nome}</div>
+            <div class="product-brand">${p.marca||''}</div>
+            <div class="badges" style="margin-top:8px;">
+              <span class="badge badge-info">Qtd: ${p.quantidade}</span>
+              <span class="badge badge-ok">Val: ${fmtDate(p.validade)}</span>
+              ${diasBadge(dias)}
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button class="btn btn-secondary btn-sm" onclick='abrirModalEditar(${JSON.stringify(p)})'>✏ Editar</button>
+            <button class="btn btn-danger" onclick="deletar(${p.id},'scanner')">🗑</button>
+          </div>
+        </div>`
+    }
+  }
+
+  if (!api_info?.encontrado && produtos.length === 0) {
+    html = `<div class="box" style="text-align:center;padding:40px;">
+      <div style="font-size:2rem;margin-bottom:10px;">❓</div>
+      <div style="font-weight:700;margin-bottom:8px;">Produto não encontrado</div>
+      <div style="color:var(--muted);font-size:.85rem;margin-bottom:18px;">Código <span class="chip">${codigo}</span> não está em nenhuma base</div>
+      <button class="btn btn-primary" onclick="abrirModalNovo('${codigo}', {})">+ Cadastrar manualmente</button>
+    </div>`
+  }
+
+  document.getElementById('scan-result').innerHTML = html
+}
+
+// ── Dashboard ──────────────────────────────────────────────────────────────
+async function carregarDashboard() {
+  const res  = await apiFetch('/api/dashboard')
+  const data = await res.json()
+  document.getElementById('s-vencidos').textContent = data.totais.vencidos
+  document.getElementById('s-criticos').textContent = data.totais.criticos
+  document.getElementById('s-atencao').textContent  = data.totais.atencao
+  document.getElementById('s-ok').textContent       = data.totais.ok
+
+  const wrap = document.getElementById('dash-tables')
+
+  function tabela(titulo, cor, lista) {
+    if (!lista.length) return ''
+    const rows = lista.map(p => `
+      <tr>
+        <td><span class="chip">${p.codigo_barras}</span></td>
+        <td><strong>${p.nome}</strong><br><small style="color:var(--muted)">${p.marca||''}</small></td>
+        <td>${p.categoria||'—'}</td>
+        <td style="text-align:center">${p.quantidade}</td>
+        <td>${fmtDate(p.validade)}</td>
+        <td>${diasBadge(p.dias_restantes)}</td>
+        <td><button class="btn btn-secondary btn-sm" onclick='abrirModalEditar(${JSON.stringify(p).replace(/'/g,"\\'")})'  >✏</button></td>
+      </tr>`).join('')
+    return `<div class="table-wrap">
+      <div class="table-header"><div class="table-title" style="color:${cor}">${titulo} (${lista.length})</div></div>
+      <table><thead><tr><th>Código</th><th>Produto</th><th>Categoria</th><th>Qtd</th><th>Validade</th><th>Status</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`
+  }
+
+  wrap.innerHTML =
+    tabela('🔴 Vencidos','var(--danger)',data.vencidos) +
+    tabela('🟡 Críticos','var(--warn)',data.criticos) +
+    tabela('🟠 Atenção','var(--accent2)',data.atencao) +
+    tabela('🟢 OK','var(--accent)',data.ok)
+
+  if (!wrap.innerHTML)
+    wrap.innerHTML = '<div class="empty"><div class="empty-icon">🎉</div>Nenhum produto cadastrado.</div>'
+}
+
+// ── Lista ──────────────────────────────────────────────────────────────────
+async function carregarLista() {
+  const res  = await apiFetch('/api/dashboard')
+  const data = await res.json()
+  const todos = [...data.vencidos,...data.criticos,...data.atencao,...data.ok]
+
+  if (!todos.length) {
+    document.getElementById('lista-wrap').innerHTML = '<div class="empty"><div class="empty-icon">📦</div>Nenhum produto cadastrado.</div>'
+    return
+  }
+
+  const rows = todos.map(p => `
+    <tr>
+      <td>${p.codigo_barras.startsWith('INT-')
+        ? `<span class="badge-interno">🏷 ${p.codigo_barras}</span>`
+        : `<span class="chip">${p.codigo_barras}</span>`}</td>
+      <td><strong>${p.nome}</strong><br><small style="color:var(--muted)">${p.marca||''}</small></td>
+      <td>${p.categoria||'—'}</td>
+      <td style="text-align:center">${p.quantidade}</td>
+      <td>${fmtDate(p.validade)}</td>
+      <td>${diasBadge(p.dias_restantes)}</td>
+      <td>
+        <button class="btn btn-secondary btn-sm" onclick='abrirModalEditar(${JSON.stringify(p).replace(/'/g,"\\'")})'  >✏ Editar</button>
+        <button class="btn btn-danger" style="margin-left:6px;" onclick="deletar(${p.id},'lista')">🗑</button>
+      </td>
+    </tr>`).join('')
+
+  document.getElementById('lista-wrap').innerHTML = `
+    <div class="table-wrap">
+      <div class="table-header"><div class="table-title">📦 ${todos.length} produto(s)</div></div>
+      <table><thead><tr><th>Código</th><th>Produto</th><th>Categoria</th><th>Qtd</th><th>Validade</th><th>Status</th><th>Ações</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`
+}
+
+
+// ── Exportar ───────────────────────────────────────────────────────────────
+function exportar() {
+  window.location.href = '/api/exportar'
+  toast('⬇ Exportando CSV...')
+}
+
+// ── Importação ─────────────────────────────────────────────────────────────
+async function carregarApiInfo() {
+  try {
+    const res  = await apiFetch('/api/integracao/info')
+    const data = await res.json()
+    document.getElementById('api-key-display').textContent = data.api_key
+    document.getElementById('curl-example').textContent =
+      `curl -X POST http://localhost:3000/api/integracao/produtos \\\n` +
+      `  -H "X-API-Key: ${data.api_key}" \\\n` +
+      `  -H "Content-Type: application/json" \\\n` +
+      `  -d '[{"codigo_barras":"7891000100103","nome":"Leite Ninho","quantidade":50,"validade":"2025-12-01"}]'`
+  } catch {}
+}
+
+function handleDrop(e) {
+  e.preventDefault()
+  document.getElementById('drop-zone').style.borderColor = 'var(--border)'
+  if (e.dataTransfer.files[0]) uploadArquivo(e.dataTransfer.files[0])
+}
+
+async function uploadArquivo(file) {
+  if (!file) return
+  const isExcel = file.name.endsWith('.xlsx')
+  const isCsv   = file.name.endsWith('.csv')
+  if (!isExcel && !isCsv) { document.getElementById('import-result').innerHTML = '<span style="color:var(--danger)">❌ Use .xlsx ou .csv</span>'; return }
+
+  document.getElementById('import-result').innerHTML = `<span style="color:var(--muted)">⏳ Importando ${file.name}...</span>`
+  const fd = new FormData(); fd.append('arquivo', file)
+  try {
+    const res  = await apiFetch(isExcel ? '/api/importar/excel' : '/api/importar/csv', { method:'POST', body:fd })
+    const data = await res.json()
+    if (!data.ok) { document.getElementById('import-result').innerHTML = `<span style="color:var(--danger)">❌ ${data.erro}</span>`; return }
+    const erros = data.erros?.length ? `<br><small style="color:var(--warn)">${data.erros.slice(0,5).map(e=>`• ${e}`).join('<br>')}</small>` : ''
+    document.getElementById('import-result').innerHTML =
+      `<div style="color:var(--accent);font-weight:700;">✅ ${data.importados}/${data.total} importado(s)${erros}</div>`
+    toast(`✅ ${data.importados} produto(s) importado(s)!`)
+  } catch { document.getElementById('import-result').innerHTML = '<span style="color:var(--danger)">❌ Erro de conexão</span>' }
+}
+
+async function testarApi() {
+  try {
+    await apiFetch('/api/integracao/info')
+    document.getElementById('api-test-result').innerHTML = '<span style="color:var(--accent);font-size:.85rem;">✅ API funcionando!</span>'
+  } catch {
+    document.getElementById('api-test-result').innerHTML = '<span style="color:var(--danger);font-size:.85rem;">❌ Falhou</span>'
+  }
+}
+
+function copiarApiKey() {
+  navigator.clipboard.writeText(document.getElementById('api-key-display').textContent)
+  toast('🔑 API Key copiada!')
+}
+
+// ── E-mail ────────────────────────────────────────────────────────────────
+function toggleSmtp() {
+  const v = document.getElementById('email-provider').value
+  document.getElementById('smtp-fields').style.display = v === 'custom' ? 'grid' : 'none'
+}
+
+async function carregarEmailConfig() {
+  try {
+    const res  = await apiFetch('/api/email/config')
+    const data = await res.json()
+    if (data.configurado && data.config) {
+      const c = data.config
+      document.getElementById('email-provider').value = c.provider || 'gmail'
+      document.getElementById('email-usuario').value  = c.email_usuario || ''
+      document.getElementById('email-destino').value  = c.email_destino || ''
+      if (c.provider === 'custom') {
+        document.getElementById('smtp-host').value = c.smtp_host || ''
+        document.getElementById('smtp-port').value = c.smtp_port || 587
+        document.getElementById('smtp-fields').style.display = 'grid'
+      }
+      document.getElementById('email-result').innerHTML =
+        '<span style="color:var(--accent);">✅ Configuração carregada. Senha não exibida por segurança.</span>'
+    }
+  } catch {}
+}
+
+async function salvarEmailConfig() {
+  const provider = document.getElementById('email-provider').value
+  const cfg = {
+    provider,
+    email_usuario: document.getElementById('email-usuario').value.trim(),
+    email_senha:   document.getElementById('email-senha').value,
+    email_destino: document.getElementById('email-destino').value.trim(),
+    smtp_host:     document.getElementById('smtp-host')?.value || '',
+    smtp_port:     document.getElementById('smtp-port')?.value || 587,
+  }
+  if (!cfg.email_usuario || !cfg.email_destino) { toast('Preencha remetente e destinatário', 'error'); return }
+  if (!cfg.email_senha)  { toast('Preencha a senha', 'error'); return }
+  const res  = await apiFetch('/api/email/config', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(cfg) })
+  const data = await res.json()
+  if (data.ok) {
+    toast('✅ Configuração salva!')
+    document.getElementById('email-result').innerHTML =
+      '<span style="color:var(--accent);">✅ Salvo! Alertas serão enviados automaticamente ao cadastrar produtos próximos ao vencimento.</span>'
+  } else {
+    toast('❌ ' + data.erro, 'error')
+  }
+}
+
+async function testarEmail() {
+  document.getElementById('email-result').innerHTML = '<span style="color:var(--muted);">⏳ Enviando e-mail de teste...</span>'
+  const res  = await apiFetch('/api/email/testar', { method:'POST' })
+  const data = await res.json()
+  if (data.ok) {
+    document.getElementById('email-result').innerHTML = '<span style="color:var(--accent);">✅ E-mail enviado! Verifique sua caixa de entrada.</span>'
+    toast('✅ E-mail de teste enviado!')
+  } else {
+    document.getElementById('email-result').innerHTML = `<span style="color:var(--danger);">❌ ${data.erro}</span>`
+    toast('❌ Falha: ' + data.erro, 'error')
+  }
+}
+
+async function enviarRelatorio() {
+  document.getElementById('email-result').innerHTML = '<span style="color:var(--muted);">⏳ Enviando relatório...</span>'
+  const res  = await apiFetch('/api/email/enviar', { method:'POST' })
+  const data = await res.json()
+  if (data.ok) {
+    document.getElementById('email-result').innerHTML = '<span style="color:var(--accent);">✅ Relatório enviado com sucesso!</span>'
+    toast('✅ Relatório enviado!')
+  } else {
+    document.getElementById('email-result').innerHTML = `<span style="color:var(--danger);">❌ ${data.erro}</span>`
+    toast('❌ Falha: ' + data.erro, 'error')
+  }
+}
+
+const _origShowView = showView
+showView = function(name) {
+  _origShowView(name)
+  if (name === 'email') carregarEmailConfig()
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+carregarDashboard()
+</script>
+</body>
+</html>

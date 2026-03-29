@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ValidaShelf — Login</title>
+<style>
+:root {
+  --bg:#0d0f14; --surface:#161a22; --surface2:#1e2330; --border:#2a3040;
+  --accent:#00e5a0; --accent2:#ff6b35; --danger:#ff3860;
+  --text:#e8eaf0; --muted:#6b7590;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;
+  min-height:100vh;display:flex;align-items:center;justify-content:center;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:20px;
+  padding:40px 36px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+.logo{display:flex;align-items:center;gap:12px;margin-bottom:32px;}
+.logo-icon{width:42px;height:42px;background:var(--accent);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:1.3rem;}
+.logo-text{font-size:1.4rem;font-weight:800;color:var(--accent);}
+.logo-sub{font-size:.78rem;color:var(--muted);margin-top:2px;}
+.field{margin-bottom:16px;}
+label{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:1px;color:var(--muted);margin-bottom:7px;}
+input{width:100%;background:var(--bg);border:2px solid var(--border);border-radius:10px;
+  padding:12px 14px;font-size:.95rem;color:var(--text);outline:none;font-family:inherit;transition:border-color .2s;}
+input:focus{border-color:var(--accent);}
+.btn{width:100%;padding:13px;border-radius:10px;border:none;cursor:pointer;
+  font-family:inherit;font-weight:700;font-size:.95rem;background:var(--accent);
+  color:#000;transition:opacity .15s;margin-top:8px;}
+.btn:hover{opacity:.85;}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.erro{background:rgba(255,56,96,.1);border:1px solid rgba(255,56,96,.3);
+  border-radius:8px;padding:10px 14px;font-size:.85rem;color:var(--danger);
+  margin-top:14px;display:none;}
+.erro.show{display:block;}
+.loader{display:inline-block;width:16px;height:16px;border:2px solid rgba(0,0,0,.3);
+  border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">📦</div>
+    <div>
+      <div class="logo-text">ValidaShelf</div>
+      <div class="logo-sub">Sistema de Controle de Validade</div>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Usuário</label>
+    <input id="usuario" type="text" placeholder="seu.usuario" autocomplete="username"
+      onkeydown="if(event.key==='Enter')document.getElementById('senha').focus()">
+  </div>
+
+  <div class="field">
+    <label>Senha</label>
+    <input id="senha" type="password" placeholder="••••••••"autocomplete="current-password"
+      onkeydown="if(event.key==='Enter')entrar()">
+  </div>
+
+  <button class="btn" id="btn-entrar" onclick="entrar()">Entrar</button>
+  <div class="erro" id="erro-msg"></div>
+</div>
+
+<script>
+// Se já tem sessão válida, redireciona direto
+const token = localStorage.getItem('vs_token')
+if (token) {
+  fetch('/api/me', { headers:{'x-session-token': token} })
+    .then(r => r.json())
+    .then(d => { if (d.ok) window.location.href = '/' })
+    .catch(() => {})
+}
+
+async function entrar() {
+  const usuario = document.getElementById('usuario').value.trim()
+  const senha   = document.getElementById('senha').value
+  const btn     = document.getElementById('btn-entrar')
+  const erroEl  = document.getElementById('erro-msg')
+
+  if (!usuario || !senha) {
+    erroEl.textContent = 'Preencha usuário e senha.'
+    erroEl.classList.add('show')
+    return
+  }
+
+  btn.disabled = true
+  btn.innerHTML = '<span class="loader"></span>Entrando...'
+  erroEl.classList.remove('show')
+
+  try {
+    const res  = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({ usuario, senha })
+    })
+    const data = await res.json()
+
+    if (data.ok) {
+      localStorage.setItem('vs_token', data.token)
+      localStorage.setItem('vs_nome', data.nome)
+      localStorage.setItem('vs_perfil', data.perfil)
+      window.location.href = '/'
+    } else {
+      erroEl.textContent = data.erro || 'Erro ao fazer login.'
+      erroEl.classList.add('show')
+      btn.disabled = false
+      btn.textContent = 'Entrar'
+    }
+  } catch {
+    erroEl.textContent = 'Erro de conexão com o servidor.'
+    erroEl.classList.add('show')
+    btn.disabled = false
+    btn.textContent = 'Entrar'
+  }
+}
+
+document.getElementById('usuario').focus()
+</script>
+</body>
+</html>
